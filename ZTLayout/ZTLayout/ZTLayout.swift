@@ -30,6 +30,18 @@ public extension ZTLayout {
         set {self._subItem = newValue}
     }
     var view: UIView {self._view}
+    
+    func allViews() -> [UIView] {
+        var views = [UIView]()
+        for item in _subItem {
+            if item._subItem.count == 0 {
+                views.append(item._view)
+            }else {
+                views.append(contentsOf: item.allViews())
+            }
+        }
+        return views
+    }
 }
 
 public typealias ZTMakerExtendable = (ConstraintMaker) -> ConstraintMakerExtendable
@@ -44,9 +56,9 @@ public class ZTLayoutConfig: NSObject {
     public var subEqualToSuperviews: [ZTMakerExtendable]?
     public var subLessThanOrEqualToSuperviews: [ZTMakerExtendable]?
     
-    public var tag: Int = 0
-    public var row: Int = 0
-    public var section: Int = 0
+    fileprivate var tag: Int = 0
+    fileprivate var row: Int = 0
+    fileprivate var section: Int = 0
     
     public var height: CGFloat?
     public var heightScale: CGFloat?
@@ -78,7 +90,7 @@ public class ZTLayoutConfig: NSObject {
     public var subGroupSpacing: [CGFloat]?
     public var subGroupSpacingEqual: CGFloat = 10
     
-    public func updateConfig(_ config: ZTLayoutConfig) {
+    func updateConfig(_ config: ZTLayoutConfig) {
         self.alignment = alignment ?? config.subAlignment
         self.spacing = spacing ?? config.subSpacing
         self.equalToSuperviews = equalToSuperviews ?? config.subEqualToSuperviews
@@ -95,83 +107,45 @@ public class ZTLayoutConfig: NSObject {
 }
 
 public class ZTEdgeItem: ZTLayout {
-    public override init(_ view: UIView, superView: UIView? = nil, config: LayoutConfig? = nil, subItem: SubItemLayout? = nil) {
-        super.init(view, superView: superView, config: config, subItem: subItem)
+    public override init(_ view: UIView) {
+        super.init(view)
         _config.equalToSuperviews = [{$0.right}, {$0.bottom}]
     }
 }
 public class ZTRightEdgeItem: ZTLayout {
-    public override init(_ view: UIView, superView: UIView? = nil, config: LayoutConfig? = nil, subItem: SubItemLayout? = nil) {
-        super.init(view, superView: superView, config: config, subItem: subItem)
+    public override init(_ view: UIView) {
+        super.init(view)
         _config.equalToSuperviews = [{$0.right}]
     }
 }
 public class ZTBottomEdgeItem: ZTLayout {
-    public override init(_ view: UIView, superView: UIView? = nil, config: LayoutConfig? = nil, subItem: SubItemLayout? = nil) {
-        super.init(view, superView: superView, config: config, subItem: subItem)
+    public override init(_ view: UIView) {
+        super.init(view)
         _config.equalToSuperviews = [{$0.bottom}]
     }
 }
 
-public extension ZTLayout {
-    func allViews() -> [UIView] {
-        var views = [UIView]()
-        for item in _subItem {
-            if item._subItem.count == 0 {
-                views.append(item._view)
-            }else {
-                views.append(contentsOf: item.allViews())
-            }
-        }
-        return views
-    }
-}
-
 public class ZTLayout {
-    public var _view: UIView
-    public weak var _superView: UIView?
-    public var _lastView: UIView?
+    var _view: UIView
+    weak var _superView: UIView?
+    var _lastView: UIView?
+
+    var _subItem: [ZTLayout] = []
+    var _config: ZTLayoutConfig = .init()
     
-    public var _subItem: [ZTLayout] = []
-    public var _config: ZTLayoutConfig = .init()
-    
-    public typealias LayoutConfig = (ZTLayoutConfig) -> Void
-    public typealias SubItemLayout = (inout [ZTLayout]) -> Void
-    public init(_ view: UIView, superView: UIView? = nil, config: LayoutConfig? = nil, subItem: SubItemLayout? = nil) {
+
+    public init(_ view: UIView) {
         self._view = view
-        self._superView = superView
-        
-        if let config = config { config(_config) }
-        if let subItem = subItem { subItem(&_subItem) }
-        
-        self.addSuperView()
-        self.addSubView()
     }
     
-    public func reload() {
-        self.addSubView()
-        self.layout()
-    }
-    
-    public func addSuperView() {
-        _superView?.addSubview(_view)
-    }
-    public func addSubView() {
-        for i in 0..<_subItem.count {
-            let item = _subItem[i]
-            item._config.updateConfig(_config)
-            item._config.tag = i
-            _view.addSubview(item._view)
-        }
-    }
-    public func addSubLayout(_ layout: ZTLayout) {
+    func addSubLayout(_ layout: ZTLayout) {
         layout._config.tag = _subItem.count
         layout._config.updateConfig(_config)
         _subItem.append(layout)
         _view.addSubview(layout._view)
     }
     
-    public func layout() {
+    func layout() {
         var lastView: UIView? = nil
         for item in self._subItem {
             if let rows = _config.subGroupItemCount {
@@ -194,7 +168,8 @@ public class ZTLayout {
             }
             if let equalToSuperviews = config.equalToSuperviews {
                 self.superSize(make, equalToSuperview: equalToSuperviews)
-            }else if let lessThanOrEqualToSuperviews = config.lessThanOrEqualToSuperviews {
+            }
+            if let lessThanOrEqualToSuperviews = config.lessThanOrEqualToSuperviews {
                 self.superSize(make, lessThanOrEqualToSuperviews: lessThanOrEqualToSuperviews)
             }
             self.width(make, config: config)
@@ -399,11 +374,12 @@ extension ZTLayout {
     func alignment(_ make: ConstraintMaker, alignment: ZTHVAlignment) {
         switch alignment {
         case .h_center, .h_last_center:
-            make.centerY.left.equalToSuperview()
+            make.top.left.equalToSuperview()
         case .h_top, .h_last_top:
             make.top.left.equalToSuperview()
         case .h_bottom, .h_last_bottom:
             make.bottom.left.equalToSuperview()
+            
         case .v_left, .v_last_left:
             make.left.top.equalToSuperview()
         case .v_center, .v_last_center:

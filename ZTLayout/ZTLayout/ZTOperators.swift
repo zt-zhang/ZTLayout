@@ -5,7 +5,7 @@
 //  Created by zhangtian on 2021/7/3.
 //
 
-import Foundation
+import UIKit
 
 precedencegroup ZTSettingPrecedence {
     associativity: left
@@ -80,6 +80,12 @@ public func *>> (left: UIView, right: ZTLayoutConfig) -> ZTLayout {
     return left
 }
 
+// MARK: -
+@discardableResult
+public func >>> ( left: ZTLayout, right: (ZTLayout) -> ()) -> ZTLayout {
+    right(left)
+    return left
+}
 // MARK: -
 @discardableResult
 public func >>> ( left: ZTLayout, right: () -> ZTLayout)-> ZTLayout {
