@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   
   s.platform     = :ios, "10.0"
   s.license      = { :type => "MIT", :file => "LICENSE" }
-  s.source_files = "**/*.swift"
+  s.source_files = "ZTLayout/ZTLayout/*.swift"
   s.framework    = "UIKit","Foundation"
   s.requires_arc = true
 
